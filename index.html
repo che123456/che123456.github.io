@@ -1,15 +1,191 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Document</title>
+  <meta charset="utf-8" />
+  <script src=http://ditu.google.cn/maps/api/js?sensor=false"></script>
+    <title></title>
+ 
+  <script>
+    var linePath=[];//坐标合集
+    var marker ;//标记
+    var markersArray = [];//标记
+    var drawListener;
+    var triangleCoords=[];//初始化多边形坐标合集
+    var bermudaTriangle;
+    var latlngArr=[{"y":"1.3592649548930418","x":"103.7282053168716"},{"y":"1.3245988674813354","x":"103.75807439646144"},{"y":"1.2966193545099025","x":"103.8482666015625"},{"y":"1.3750533057672012","x":"103.87343084177394"},{"y":"1.3832906648426648","x":"103.7886301215591"}]//初始化坐标数据
+    var lineArea=new google.maps.Polygon({  //多边形参数
+      clickable:false,
+      strokeColor: "#00cc00 ", //线条颜色
+      strokeOpacity: 1.0, //线条透明度
+      strokeWeight: 1 ,//粗细
+      fillColor: "#f19236 ",//填充色
+       fillOpacity: 0.1//透明度
+    });
+  window.onload=function(){
+    //初始化地图
+    map = new google.maps.Map(document.getElementById("mapContainer "), {
+        zoom: 12,//缩放等级
+        center: {lat:1.3614959238072084, lng:103.82038747629542},//初始坐标
+        mapTypeId: google.maps.MapTypeId.ROADMAP,//地图类型
+      /*
+        mapTypeId:
+        HYBRID	一种带公路和城市名称的照相地图。
+        ROADMAP	一种标准的，默认是 2D 的地图。
+        SATELLITE	一种照相地图。
+        TERRAIN	一种带有山脉、河流等的地图。
+      */  
+      });
+
+    // // 初始化多边形
+    // latlngArr.map(val=>{
+    //   triangleCoords.push(
+    //     new google.maps.LatLng(val.y, val.x)
+    //   )
+    //   addMarker(new google.maps.LatLng(val.y, val.x), map)
+    // })
+    // bermudaTriangle = new google.maps.Polygon({
+    //   paths: triangleCoords,
+    //   strokeColor: "#f19236 ",
+    //   strokeOpacity: 1.0,
+    //   strokeWeight: 1 ,//粗细
+    //   fillColor: "#f19236 ",//填充色
+    //    fillOpacity: 0.2//透明度
+    // });
+    // bermudaTriangle.setMap(map);
+    // 初始化多边形End
+
+      drawListener=google.maps.event.addListener(map, 'click',
+        function(event) {
+        
+          if(!setBoundary(event.latLng,linePath)){
+            alert('错误的坐标')
+            return false;
+          }
+            addMarker(event.latLng, map);//新增地图标记
+            linePath.unshift(event.latLng);
+            //画多边形
+            if (lineArea != null) {
+              lineArea.setMap(null);
+            }
+            lineArea.setPath(linePath);
+            lineArea.setMap(map);
+        });
+ 
+      //添加右键事件，点击右键结束绘制并输出所有的路径点
+      google.maps.event.addListener(map, 'rightclick',
+        function(event) {
+          google.maps.event.removeListener(drawListener);
+          linePath.map(val=>{
+            let item=val.toString().substring(1,val.toString().length-1);//截取经纬度
+            latlngArr.push({
+              y:item.split(', ')[0],
+              x:item.split(', ')[1]
+            })
+          })
+          console.log(JSON.stringify(latlngArr));
+        });
+      document.getElementById("btn").onclick=function(){
+        bermudaTriangle.setMap(null)
+        lineArea.setMap(null)
+        markersArray.map(val=>{
+          val.setMap(null)
+          val=null
+        })
+        console.log(markersArray.length);
+      }
+  }
+  //添加坐标对象
+  function addMarker(latLng, map) {
+      marker = new google.maps.Marker({
+          position: latLng,
+          map: map
+      });
+      markersArray.push(marker);
+    }
+  
+    function setBoundary(latLng,linePath) {
+      let isState=true;
+      var linePathArr=[]
+      if(linePath.length>=3){
+        var  latLngItme={
+          y:latLng.toString().substring(1,latLng.toString().length-1).split(', ')[0],
+          x:latLng.toString().substring(1,latLng.toString().length-1).split(', ')[1]
+        };
+        linePath.map((val,index)=>{
+            let item=val.toString().substring(1,val.toString().length-1);//截取经纬度
+            linePathArr.push({
+              y:item.split(', ')[0],
+              x:item.split(', ')[1]
+            })
+          })
+          for (let index = 0; index < linePathArr.length; index++) {
+            if(index < linePathArr.length-1){
+              if (!setCoordinate(latLngItme,linePathArr[index],linePathArr[index+1]) ) {
+                isState=false
+                return false;
+              }
+            }
+          }
+          // console.log(latLng);
+          // console.log(linePathArr);
+      }
+      if(isState){
+            return true
+          }else{
+            return false
+          }
+    }
+    function setCoordinate(latLng,latLngOne,latLngTwo) {
+      let xMin='';
+      let xMax='';
+      let yMin='';
+      let yMax='';
+      if(latLngOne.x>latLngTwo.x){
+        xMin=latLngTwo.x
+        xMax=latLngOne.x
+      }else{
+        xMin=latLngOne.x
+        xMax=latLngTwo.x
+      }
+      if(latLngOne.y>latLngTwo.y){
+        yMin=latLngTwo.y
+        yMax=latLngOne.y
+      }else{
+        yMin=latLngOne.y
+        yMax=latLngTwo.y
+      }
+      console.log(latLng.x < xMax,'x'+latLng.x,'xMax'+xMax);
+      console.log(latLng.x > xMin,'x'+latLng.x,'xMin'+xMin);
+      console.log(latLng.y < yMax,'y'+latLng.x,'yMax'+xMin);
+      console.log(latLng.y > yMin,'y'+latLng.x,'yMin'+xMin);
+      if((latLng.x < xMax && latLng.x > xMin) && (latLng.y < yMax && latLng.y > yMin)){
+        console.log('错误的坐标');
+        return false;
+      }else{
+        return true;
+      }
+      console.log(xMin,xMax,yMin,yMax);
+      console.log(latLng);
+    }
+  </script>
 </head>
-
 <body>
-  <h1>我的个人网站</h1>
+<div id="mapContainer " style="width:100%;height: 100%;">
+ 
+</div>
+<input type="button" value="清除" class="clear" id="btn">
 </body>
-
+<style>
+*{
+  margin: 0;
+  padding: 0;
+}  
+.clear{
+  position: fixed;
+  right: 15%;
+  bottom: 10%;
+  width: 100px;
+  height: 48px;
+}
+</style>
 </html>
